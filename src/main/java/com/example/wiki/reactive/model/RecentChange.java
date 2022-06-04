@@ -12,4 +12,7 @@ import lombok.Setter;
 public class RecentChange {
   private String title;
   private String type;
+  private String user;
+  private String comment;
+  private String wiki;
 }
