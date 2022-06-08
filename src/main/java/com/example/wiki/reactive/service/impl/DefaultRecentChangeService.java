@@ -14,6 +14,6 @@ public class DefaultRecentChangeService implements RecentChangeService {
 
   @Override
   public Flux<RecentChange> getRecentChanges() {
-    return recentChangeRepository.findAll();
+    return recentChangeRepository.findAllBy();
   }
 }
