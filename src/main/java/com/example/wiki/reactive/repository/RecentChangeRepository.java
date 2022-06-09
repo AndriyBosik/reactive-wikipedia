@@ -10,4 +10,6 @@ import reactor.core.publisher.Flux;
 public interface RecentChangeRepository extends ReactiveMongoRepository<RecentChange, Long> {
   @Tailable
   Flux<RecentChange> findAllBy();
+
+  Flux<RecentChange> findAllByUser(String user);
 }
