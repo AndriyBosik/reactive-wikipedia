@@ -1,9 +1,6 @@
 package com.example.wiki.reactive.service.impl;
 
-import com.example.wiki.reactive.model.RecentChange;
-import com.example.wiki.reactive.model.TypedContribution;
-import com.example.wiki.reactive.model.Contributions;
-import com.example.wiki.reactive.model.UserContribution;
+import com.example.wiki.reactive.model.*;
 import com.example.wiki.reactive.repository.RecentChangeRepository;
 import com.example.wiki.reactive.service.RecentChangeService;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +10,10 @@ import reactor.core.publisher.GroupedFlux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,17 +43,61 @@ public class DefaultRecentChangeService implements RecentChangeService {
   @Override
   public Mono<Contributions> getTypedContributionsForUser(String user) {
     return recentChangeRepository.findAllByUser(user)
-        .collect(Collectors.toMap(RecentChange::getType, change -> new TypedContribution(change.getType(), 1L), this::mergeChanges))
+        .collect(Collectors.toMap(
+            RecentChange::getType,
+            change -> new TypedContribution(change.getType(), 1L),
+            this::mergeTypedContributions))
         .map(Map::values)
         .flatMapMany(Flux::fromIterable)
         .collect(Collectors.toList())
         .map(contributions -> new Contributions(user, contributions));
   }
 
-  private TypedContribution mergeChanges(TypedContribution first, TypedContribution second) {
+  @Override
+  public Mono<MostContributedTopics> getMostContributedTopicsForUser(String user) {
+    return recentChangeRepository.findAllByUser(user)
+        .map(RecentChange::getWiki)
+        .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+        .map(Map::entrySet)
+        .flatMapMany(Flux::fromIterable)
+        .groupBy(Map.Entry::getValue)
+        .reduce(this::reduceToMaxContribution)
+        .map(flux -> mapToMostContributedTopics(user, flux))
+        .flatMap(Function.identity());
+  }
+
+  private Mono<MostContributedTopics> mapToMostContributedTopics(String user, GroupedFlux<Long, Map.Entry<String, Long>> flux) {
+    return flux
+        .reduce(new MostContributedTopics(user, flux.key().intValue(), new ArrayList<>()), this::reduceToMostContributedTopics);
+  }
+
+  private MostContributedTopics reduceToMostContributedTopics(MostContributedTopics contributedTopics, Map.Entry<String, Long> entry) {
+    contributedTopics.getTopics().add(entry.getKey());
+    return new MostContributedTopics(
+        contributedTopics.getUser(),
+        contributedTopics.getContributionCount(),
+        contributedTopics.getTopics()
+    );
+  }
+
+  private GroupedFlux<Long, Map.Entry<String, Long>> reduceToMaxContribution(
+      GroupedFlux<Long, Map.Entry<String, Long>> first,
+      GroupedFlux<Long, Map.Entry<String, Long>> second
+  ) {
+    if (first.key() > second.key()) {
+      return first;
+    }
+    return second;
+  }
+
+  private TypedContribution mergeTypedContributions(TypedContribution first, TypedContribution second) {
     return new TypedContribution(
         first.getType(),
         first.getAmount() + second.getAmount());
+  }
+
+  private int mergeContributions(int first, RecentChange recentChange) {
+    return first + 1;
   }
 
   private Flux<UserContribution> computeSnapshotUserContribution(String user, long duration) {

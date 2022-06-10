@@ -1,5 +1,6 @@
 package com.example.wiki.reactive.service;
 
+import com.example.wiki.reactive.model.MostContributedTopics;
 import com.example.wiki.reactive.model.RecentChange;
 import com.example.wiki.reactive.model.Contributions;
 import com.example.wiki.reactive.model.UserContribution;
@@ -16,4 +17,6 @@ public interface RecentChangeService {
   Flux<UserContribution> getUserContribution(String user, long duration);
 
   Mono<Contributions> getTypedContributionsForUser(String user);
+
+  Mono<MostContributedTopics> getMostContributedTopicsForUser(String user);
 }
