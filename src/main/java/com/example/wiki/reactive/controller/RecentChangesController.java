@@ -2,8 +2,8 @@ package com.example.wiki.reactive.controller;
 
 import com.example.wiki.reactive.meta.Endpoint;
 import com.example.wiki.reactive.model.RecentChange;
+import com.example.wiki.reactive.model.TopicsContribution;
 import com.example.wiki.reactive.model.UserContribution;
-import com.example.wiki.reactive.repository.RecentChangeRepository;
 import com.example.wiki.reactive.service.RecentChangeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -17,7 +17,6 @@ import java.util.Set;
 @RequestMapping(value = Endpoint.RECENT_CHANGES, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 @RequiredArgsConstructor
 public class RecentChangesController {
-  private final RecentChangeRepository recentChangeRepository;
   private final RecentChangeService recentChangeService;
 
   @GetMapping
@@ -36,5 +35,10 @@ public class RecentChangesController {
       @RequestParam(value = "duration", defaultValue = "1") long duration
   ) {
     return recentChangeService.getUserContribution(user, duration);
+  }
+
+  @GetMapping("/users/{user}/most-contributed")
+  public Mono<TopicsContribution> getMostContributedTopicsForUser(@PathVariable("user") String user) {
+    return recentChangeService.getMostContributedTopicsForUser(user);
   }
 }

@@ -1,6 +1,8 @@
 package com.example.wiki.reactive.service.impl;
 
 import com.example.wiki.reactive.model.RecentChange;
+import com.example.wiki.reactive.model.TopicContribution;
+import com.example.wiki.reactive.model.TopicsContribution;
 import com.example.wiki.reactive.model.UserContribution;
 import com.example.wiki.reactive.repository.RecentChangeRepository;
 import com.example.wiki.reactive.service.RecentChangeService;
@@ -11,7 +13,8 @@ import reactor.core.publisher.GroupedFlux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,11 +36,27 @@ public class DefaultRecentChangeService implements RecentChangeService {
   @Override
   public Flux<UserContribution> getUserContribution(String user, long duration) {
     return Flux.concat(
-        computeSnapshotContribution(user, duration),
-        getRealTimeContribution(user, duration));
+        computeSnapshotUserContribution(user, duration),
+        getRealTimeUserContribution(user, duration));
   }
 
-  private Flux<UserContribution> computeSnapshotContribution(String user, long duration) {
+  @Override
+  public Mono<TopicsContribution> getMostContributedTopicsForUser(String user) {
+    return recentChangeRepository.findAllByUser(user)
+        .collect(Collectors.toMap(RecentChange::getWiki, change -> new TopicContribution(change.getWiki(), 1L), this::mergeChanges))
+        .map(Map::values)
+        .flatMapMany(Flux::fromIterable)
+        .collect(Collectors.toList())
+        .map(contributions -> new TopicsContribution(user, contributions));
+  }
+
+  private TopicContribution mergeChanges(TopicContribution first, TopicContribution second) {
+    return new TopicContribution(
+        first.getTopic(),
+        first.getAmount() + second.getAmount());
+  }
+
+  private Flux<UserContribution> computeSnapshotUserContribution(String user, long duration) {
     return recentChangeRepository.findAllByUser(user)
         .groupBy(recentChange -> computeTime(recentChange, duration))
         .flatMap(flux -> mapToMono(flux, user));
@@ -53,7 +72,7 @@ public class DefaultRecentChangeService implements RecentChangeService {
         .map(amount -> new UserContribution(user, flux.key(), amount));
   }
 
-  private Flux<UserContribution> getRealTimeContribution(String user, long duration) {
+  private Flux<UserContribution> getRealTimeUserContribution(String user, long duration) {
     return recentChangeFlux
         .window(Duration.ofSeconds(duration))
         .flatMap(flux -> reduceToContribution(flux, user, duration))
