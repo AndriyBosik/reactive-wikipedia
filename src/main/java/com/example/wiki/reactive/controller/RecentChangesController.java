@@ -2,7 +2,7 @@ package com.example.wiki.reactive.controller;
 
 import com.example.wiki.reactive.meta.Endpoint;
 import com.example.wiki.reactive.model.RecentChange;
-import com.example.wiki.reactive.model.TopicsContribution;
+import com.example.wiki.reactive.model.Contributions;
 import com.example.wiki.reactive.model.UserContribution;
 import com.example.wiki.reactive.service.RecentChangeService;
 import lombok.RequiredArgsConstructor;
@@ -37,8 +37,8 @@ public class RecentChangesController {
     return recentChangeService.getUserContribution(user, duration);
   }
 
-  @GetMapping("/users/{user}/most-contributed")
-  public Mono<TopicsContribution> getMostContributedTopicsForUser(@PathVariable("user") String user) {
-    return recentChangeService.getMostContributedTopicsForUser(user);
+  @GetMapping("/users/{user}/typed-contributions")
+  public Mono<Contributions> getTypedContributionsForUser(@PathVariable("user") String user) {
+    return recentChangeService.getTypedContributionsForUser(user);
   }
 }

@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class TopicContribution {
-  private String topic;
+public class TypedContribution {
+  private String type;
   private Long amount;
 }

@@ -12,7 +12,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class TopicsContribution {
+public class Contributions {
   private String user;
-  private List<TopicContribution> topicContributions = new ArrayList<>();
+  private List<TypedContribution> contributions = new ArrayList<>();
 }

@@ -1,8 +1,8 @@
 package com.example.wiki.reactive.service.impl;
 
 import com.example.wiki.reactive.model.RecentChange;
-import com.example.wiki.reactive.model.TopicContribution;
-import com.example.wiki.reactive.model.TopicsContribution;
+import com.example.wiki.reactive.model.TypedContribution;
+import com.example.wiki.reactive.model.Contributions;
 import com.example.wiki.reactive.model.UserContribution;
 import com.example.wiki.reactive.repository.RecentChangeRepository;
 import com.example.wiki.reactive.service.RecentChangeService;
@@ -41,18 +41,18 @@ public class DefaultRecentChangeService implements RecentChangeService {
   }
 
   @Override
-  public Mono<TopicsContribution> getMostContributedTopicsForUser(String user) {
+  public Mono<Contributions> getTypedContributionsForUser(String user) {
     return recentChangeRepository.findAllByUser(user)
-        .collect(Collectors.toMap(RecentChange::getWiki, change -> new TopicContribution(change.getWiki(), 1L), this::mergeChanges))
+        .collect(Collectors.toMap(RecentChange::getType, change -> new TypedContribution(change.getType(), 1L), this::mergeChanges))
         .map(Map::values)
         .flatMapMany(Flux::fromIterable)
         .collect(Collectors.toList())
-        .map(contributions -> new TopicsContribution(user, contributions));
+        .map(contributions -> new Contributions(user, contributions));
   }
 
-  private TopicContribution mergeChanges(TopicContribution first, TopicContribution second) {
-    return new TopicContribution(
-        first.getTopic(),
+  private TypedContribution mergeChanges(TypedContribution first, TypedContribution second) {
+    return new TypedContribution(
+        first.getType(),
         first.getAmount() + second.getAmount());
   }
 
