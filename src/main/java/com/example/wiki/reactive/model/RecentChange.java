@@ -25,5 +25,5 @@ public class RecentChange {
   private String user;
   private String comment;
   private String wiki;
-  private int timestamp;
+  private long timestamp;
 }

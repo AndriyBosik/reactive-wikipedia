@@ -1,5 +1,6 @@
 package com.example.wiki.reactive.service.impl;
 
+import com.example.wiki.reactive.meta.Period;
 import com.example.wiki.reactive.model.*;
 import com.example.wiki.reactive.repository.RecentChangeRepository;
 import com.example.wiki.reactive.service.RecentChangeService;
@@ -66,6 +67,24 @@ public class DefaultRecentChangeService implements RecentChangeService {
         .flatMap(Function.identity());
   }
 
+  @Override
+  public Mono<UserActivity> getMostActiveUser(Period period) {
+    return recentChangeRepository.findAllByTimestampGreaterThan(period.getTimestamp())
+        .map(RecentChange::getUser)
+        .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+        .map(Map::entrySet)
+        .flatMapMany(Flux::fromIterable)
+        .reduce(this::maxUserActivityReducer)
+        .map(entry -> new UserActivity(entry.getKey(), entry.getValue()));
+  }
+
+  private Map.Entry<String, Long> maxUserActivityReducer(Map.Entry<String, Long> first, Map.Entry<String, Long> second) {
+    if (first.getValue() > second.getValue()) {
+      return first;
+    }
+    return second;
+  }
+
   private Mono<MostContributedTopics> mapToMostContributedTopics(String user, GroupedFlux<Long, Map.Entry<String, Long>> flux) {
     return flux
         .reduce(new MostContributedTopics(user, flux.key().intValue(), new ArrayList<>()), this::reduceToMostContributedTopics);
@@ -94,10 +113,6 @@ public class DefaultRecentChangeService implements RecentChangeService {
     return new TypedContribution(
         first.getType(),
         first.getAmount() + second.getAmount());
-  }
-
-  private int mergeContributions(int first, RecentChange recentChange) {
-    return first + 1;
   }
 
   private Flux<UserContribution> computeSnapshotUserContribution(String user, long duration) {

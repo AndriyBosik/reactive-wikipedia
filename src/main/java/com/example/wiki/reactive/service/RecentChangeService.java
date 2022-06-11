@@ -1,9 +1,7 @@
 package com.example.wiki.reactive.service;
 
-import com.example.wiki.reactive.model.MostContributedTopics;
-import com.example.wiki.reactive.model.RecentChange;
-import com.example.wiki.reactive.model.Contributions;
-import com.example.wiki.reactive.model.UserContribution;
+import com.example.wiki.reactive.meta.Period;
+import com.example.wiki.reactive.model.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -19,4 +17,6 @@ public interface RecentChangeService {
   Mono<Contributions> getTypedContributionsForUser(String user);
 
   Mono<MostContributedTopics> getMostContributedTopicsForUser(String user);
+
+  Mono<UserActivity> getMostActiveUser(Period period);
 }

@@ -1,10 +1,8 @@
 package com.example.wiki.reactive.controller;
 
 import com.example.wiki.reactive.meta.Endpoint;
-import com.example.wiki.reactive.model.MostContributedTopics;
-import com.example.wiki.reactive.model.RecentChange;
-import com.example.wiki.reactive.model.Contributions;
-import com.example.wiki.reactive.model.UserContribution;
+import com.example.wiki.reactive.meta.Period;
+import com.example.wiki.reactive.model.*;
 import com.example.wiki.reactive.service.RecentChangeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -46,5 +44,10 @@ public class RecentChangesController {
   @GetMapping("/users/{user}/most-contributed")
   public Mono<MostContributedTopics> getMostContributedTopicsForUser(@PathVariable("user") String user) {
     return recentChangeService.getMostContributedTopicsForUser(user);
+  }
+
+  @GetMapping("/users/most-active")
+  public Mono<UserActivity> getMostActiveUser(@RequestParam(value = "period", defaultValue = "year") Period period) {
+    return recentChangeService.getMostActiveUser(period);
   }
 }

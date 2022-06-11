@@ -12,4 +12,6 @@ public interface RecentChangeRepository extends ReactiveMongoRepository<RecentCh
   Flux<RecentChange> findAllBy();
 
   Flux<RecentChange> findAllByUser(String user);
+
+  Flux<RecentChange> findAllByTimestampGreaterThan(long timestamp);
 }
