@@ -78,6 +78,25 @@ public class DefaultRecentChangeService implements RecentChangeService {
         .map(entry -> new UserActivity(entry.getKey(), entry.getValue()));
   }
 
+  @Override
+  public Flux<TopicEditions> getTopTopicEditions(long amount) {
+    return recentChangeRepository.findAllByType("edit")
+        .map(RecentChange::getWiki)
+        .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+        .map(Map::entrySet)
+        .flatMapMany(Flux::fromIterable)
+        .sort((first, second) -> (int) (second.getValue() - first.getValue()))
+        .take(amount)
+        .map(this::mapToTopicEditions);
+  }
+
+  private TopicEditions mapToTopicEditions(Map.Entry<String, Long> entry) {
+    return new TopicEditions(
+        entry.getKey(),
+        entry.getValue()
+    );
+  }
+
   private Map.Entry<String, Long> maxUserActivityReducer(Map.Entry<String, Long> first, Map.Entry<String, Long> second) {
     if (first.getValue() > second.getValue()) {
       return first;

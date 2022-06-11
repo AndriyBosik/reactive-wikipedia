@@ -50,4 +50,9 @@ public class RecentChangesController {
   public Mono<UserActivity> getMostActiveUser(@RequestParam(value = "period", defaultValue = "year") Period period) {
     return recentChangeService.getMostActiveUser(period);
   }
+
+  @GetMapping("/editions/top-10")
+  public Flux<TopicEditions> getTop10TopicEditions() {
+    return recentChangeService.getTopTopicEditions(10);
+  }
 }

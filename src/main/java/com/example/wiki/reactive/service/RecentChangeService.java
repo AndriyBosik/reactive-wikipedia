@@ -19,4 +19,6 @@ public interface RecentChangeService {
   Mono<MostContributedTopics> getMostContributedTopicsForUser(String user);
 
   Mono<UserActivity> getMostActiveUser(Period period);
+
+  Flux<TopicEditions> getTopTopicEditions(long amount);
 }
