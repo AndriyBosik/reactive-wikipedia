@@ -1,7 +1,13 @@
 package com.example.wiki.reactive.service.impl;
 
 import com.example.wiki.reactive.meta.Period;
-import com.example.wiki.reactive.model.*;
+import com.example.wiki.reactive.model.Contributions;
+import com.example.wiki.reactive.model.MostContributedTopics;
+import com.example.wiki.reactive.model.RecentChange;
+import com.example.wiki.reactive.model.TopicEditions;
+import com.example.wiki.reactive.model.TypedContribution;
+import com.example.wiki.reactive.model.UserActivity;
+import com.example.wiki.reactive.model.UserContribution;
 import com.example.wiki.reactive.repository.RecentChangeRepository;
 import com.example.wiki.reactive.service.RecentChangeService;
 import lombok.RequiredArgsConstructor;
@@ -11,8 +17,9 @@ import reactor.core.publisher.GroupedFlux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -50,7 +57,7 @@ public class DefaultRecentChangeService implements RecentChangeService {
             this::mergeTypedContributions))
         .map(Map::values)
         .flatMapMany(Flux::fromIterable)
-        .collect(Collectors.toList())
+        .collect(Collectors.toSet())
         .map(contributions -> new Contributions(user, contributions));
   }
 
@@ -85,9 +92,16 @@ public class DefaultRecentChangeService implements RecentChangeService {
         .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
         .map(Map::entrySet)
         .flatMapMany(Flux::fromIterable)
-        .sort((first, second) -> (int) (second.getValue() - first.getValue()))
+        .sort(this::getTopicEditionsComparator)
         .take(amount)
         .map(this::mapToTopicEditions);
+  }
+
+  private int getTopicEditionsComparator(Map.Entry<String, Long> first, Map.Entry<String, Long> second) {
+    if (Objects.equals(first.getValue(), second.getValue())) {
+      return String.CASE_INSENSITIVE_ORDER.compare(first.getKey(), second.getKey());
+    }
+    return (int) (second.getValue() - first.getValue());
   }
 
   private TopicEditions mapToTopicEditions(Map.Entry<String, Long> entry) {
@@ -100,13 +114,15 @@ public class DefaultRecentChangeService implements RecentChangeService {
   private Map.Entry<String, Long> maxUserActivityReducer(Map.Entry<String, Long> first, Map.Entry<String, Long> second) {
     if (first.getValue() > second.getValue()) {
       return first;
+    } else if (first.getValue() < second.getValue()) {
+      return second;
     }
-    return second;
+    return first.getKey().compareTo(second.getKey()) > 0 ? second : first;
   }
 
   private Mono<MostContributedTopics> mapToMostContributedTopics(String user, GroupedFlux<Long, Map.Entry<String, Long>> flux) {
     return flux
-        .reduce(new MostContributedTopics(user, flux.key().intValue(), new ArrayList<>()), this::reduceToMostContributedTopics);
+        .reduce(new MostContributedTopics(user, flux.key().intValue(), new HashSet<>()), this::reduceToMostContributedTopics);
   }
 
   private MostContributedTopics reduceToMostContributedTopics(MostContributedTopics contributedTopics, Map.Entry<String, Long> entry) {
