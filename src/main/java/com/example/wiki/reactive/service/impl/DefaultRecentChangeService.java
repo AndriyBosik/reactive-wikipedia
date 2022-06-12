@@ -37,8 +37,7 @@ public class DefaultRecentChangeService implements RecentChangeService {
 
   @Override
   public Flux<RecentChange> getUsersRecentChanges(Set<String> users) {
-    return recentChangeRepository.findAllBy()
-        .filter(recentChange -> ifContainsUser(users, recentChange));
+    return recentChangeRepository.findAllByUserInIgnoreCase(users);
   }
 
   @Override
