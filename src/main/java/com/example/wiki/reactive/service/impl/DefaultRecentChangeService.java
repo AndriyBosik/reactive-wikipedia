@@ -184,7 +184,7 @@ public class DefaultRecentChangeService implements RecentChangeService {
     return new UserContribution(
         contribution.getUser(),
         Math.min(contribution.getTime(), computeTime(change, duration)),
-        duration
+        contribution.getAmount() + 1
     );
   }
 

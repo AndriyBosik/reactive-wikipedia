@@ -7,6 +7,7 @@ import com.example.wiki.reactive.model.RecentChange;
 import com.example.wiki.reactive.model.TopicEditions;
 import com.example.wiki.reactive.model.TypedContribution;
 import com.example.wiki.reactive.model.UserActivity;
+import com.example.wiki.reactive.model.UserContribution;
 import com.example.wiki.reactive.repository.RecentChangeRepository;
 import com.example.wiki.reactive.service.impl.DefaultRecentChangeService;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import org.mockito.Mockito;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Set;
@@ -21,6 +23,43 @@ import java.util.Set;
 import static org.mockito.ArgumentMatchers.anyLong;
 
 class RecentChangeServiceTest {
+  @Test
+  void shouldReturnRepositoryContributionsWithRealTime() {
+    StepVerifier.withVirtualTime(this::getUserContributions)
+        .expectSubscription()
+        .expectNextMatches(userContribution -> "user".equals(userContribution.getUser()) && userContribution.getAmount() == 3L)
+        .expectNoEvent(Duration.ofSeconds(60))
+        .expectNextMatches(userContribution -> "user".equals(userContribution.getUser()) && userContribution.getAmount() == 1L)
+        .expectNoEvent(Duration.ofSeconds(60))
+        .expectNextMatches(userContribution -> "user".equals(userContribution.getUser()) && userContribution.getAmount() == 2L)
+        .expectNoEvent(Duration.ofSeconds(60))
+        .expectNextMatches(userContribution -> "user".equals(userContribution.getUser()) && userContribution.getAmount() == 2L)
+        .thenCancel()
+        .verify();
+  }
+
+  @Test
+  void shouldReturnUserContributionsFromRepositoryOnly() {
+    LocalDateTime now = LocalDateTime.now().withHour(6).withMinute(5).withSecond(55);
+    Flux<RecentChange> recentChangeFlux = Flux.just(
+        generateRecentChange("user", now.minusSeconds(50)),
+        generateRecentChange("user", now.minusSeconds(40)),
+        generateRecentChange("user", now.minusSeconds(30)),
+        generateRecentChange("user", now.minusSeconds(20)),
+        generateRecentChange("user", now.minusSeconds(10)),
+        generateRecentChange("user", now)
+    );
+
+    RecentChangeRepository repository = Mockito.mock(RecentChangeRepository.class);
+    Mockito.when(repository.findAllByUser("user")).thenReturn(recentChangeFlux);
+    RecentChangeService recentChangeService = new DefaultRecentChangeService(Flux.empty(), repository);
+    StepVerifier.create(recentChangeService.getUserContribution("user", 60))
+        .expectSubscription()
+        .expectNextMatches(userContribution -> "user".equals(userContribution.getUser()) && userContribution.getAmount() == 6L)
+        .thenCancel()
+        .verify();
+  }
+
   @Test
   void shouldReturnTypedContributionsForUser() {
     Flux<RecentChange> recentChangeFlux = Flux.just(
@@ -243,6 +282,26 @@ class RecentChangeServiceTest {
         .verifyComplete();
   }
 
+  private Flux<UserContribution> getUserContributions() {
+    LocalDateTime now = LocalDateTime.now().withHour(6).withMinute(5).withSecond(55);
+    Flux<RecentChange> repositoryRecentChangeFlux = Flux.just(
+        generateRecentChange("user", now.minusMinutes(4).minusSeconds(40)),
+        generateRecentChange("user", now.minusMinutes(4).minusSeconds(20)),
+        generateRecentChange("user", now.minusMinutes(4))
+    );
+
+    RecentChangeRepository repository = Mockito.mock(RecentChangeRepository.class);
+    Mockito.when(repository.findAllByUser("user")).thenReturn(repositoryRecentChangeFlux);
+
+    Flux<RecentChange> flux = Flux.interval(Duration.ofSeconds(1))
+        .filter(second -> second == 30 || second == 65 || second == 70 || second == 140 || second == 160)
+        .map(second -> generateRecentChange("user", now.minusSeconds(second)));
+
+    RecentChangeService recentChangeService = new DefaultRecentChangeService(flux, repository);
+
+    return recentChangeService.getUserContribution("user", 60);
+  }
+
   private RecentChange generateRecentChange(String user, String type) {
     return new RecentChange(
         "id",
@@ -265,11 +324,12 @@ class RecentChangeServiceTest {
         "user1",
         "comment",
         wiki,
-        LocalDateTime.now().toInstant(ZoneOffset.UTC).toEpochMilli() / 1000
+        toTimestamp(LocalDateTime.now())
     );
   }
 
   private RecentChange generateRecentChange(String user, LocalDateTime localDateTime) {
+    System.out.println(toTimestamp(localDateTime));
     return new RecentChange(
         "id",
         1L,
@@ -278,7 +338,11 @@ class RecentChangeServiceTest {
         user,
         "comment",
         "wiki",
-        localDateTime.toInstant(ZoneOffset.UTC).toEpochMilli() / 1000
+        toTimestamp(localDateTime)
     );
+  }
+
+  private long toTimestamp(LocalDateTime localDateTime) {
+    return localDateTime.toInstant(ZoneOffset.UTC).toEpochMilli() / 1000;
   }
 }
