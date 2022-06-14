@@ -187,10 +187,4 @@ public class DefaultRecentChangeService implements RecentChangeService {
         contribution.getAmount() + 1
     );
   }
-
-  private boolean ifContainsUser(Set<String> users, RecentChange recentChange) {
-    return users.stream()
-        .map(String::toLowerCase)
-        .anyMatch(user -> user.equalsIgnoreCase(recentChange.getUser()));
-  }
 }
